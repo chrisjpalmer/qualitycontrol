@@ -1,0 +1,89 @@
+<html>
+    <head>
+        <script lang="js">
+            window.onload = function() {
+
+                let waiting = true;
+                let chart1 = document.getElementById("chart-1")
+                let chart2 = document.getElementById("chart-2")
+                let curChart = chart1
+                let nextChart = chart2
+
+               
+                
+
+                function loadChart() {
+                    waitingChart = nextChart;
+                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}`)
+                }
+
+                function swapCharts() {
+                    // setTimeout(() => {
+                        nextChart.style.visibility = "visible";
+                        nextChart.style.height = "1000px"
+                        nextChart.style.display = "initial";
+                        curChart.style.visibility = "collapse";
+                        curChart.style.height = "0px";
+                        curChart.style.display = "none";
+                        let _n = nextChart
+                        let _c = curChart
+                        curChart = _n
+                        nextChart = _c
+                        waitingChart = null
+                    // }, 200)
+                }
+
+                chart1.addEventListener('load', () => {
+                    if (waitingChart != chart1) {
+                        return;
+                    }
+                    swapCharts()
+                })
+
+                chart2.addEventListener('load', () => {
+                    if (waitingChart != chart2) {
+                        return;
+                    }
+                    swapCharts()
+                })
+
+
+                let n = "1000";
+                let k = "30";
+                let r = "10";
+
+                document.getElementById("n").value = n;
+                document.getElementById("k").value = k;
+                document.getElementById("r").value = r;
+
+
+                document.getElementById("n").addEventListener('input', (ev) => {
+                    n = ev.target.value
+                    loadChart()
+                })
+
+                document.getElementById("k").addEventListener('input', (ev) => {
+                    k = ev.target.value
+                    loadChart()
+                })
+
+                document.getElementById("r").addEventListener('input', (ev) => {
+                    r = ev.target.value
+                    loadChart()
+                })
+
+                loadChart();
+            }
+            
+        </script>
+    </head>
+    <body>
+        <form>
+            <label>n<input id="n" name="n" type="number" min="1" max="1100"></label><br>
+            <label>k<input id="k" name="k" type="number" min="1" max="1100"></label><br>
+            <label>r<input id="r" name="r" type="number" min="1" max="1100"></label><br>
+        </form>
+        <iframe id="chart-1" style="height:1000px; width: 100%; visibility: visible; display: initial;"></iframe>
+        <iframe id="chart-2" style="height:1000px; width: 100%; visibility: collapse; display: none;"></iframe>
+    </body>
+</html>
