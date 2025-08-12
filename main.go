@@ -64,8 +64,9 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 
 	// make data points
 	dp := []opts.LineData{}
+	fmt.Printf("\n----------------------------------------------------\nn: %d, k: %d, r: %d\n", n, k, r)
 	for i, p := range pp {
-		fmt.Printf("n: %d, k: %d, r: %d, m: %d => %.2f%%\n", n, k, r, mm[i], p*100)
+		fmt.Printf("m: %d => %.2f%%\n", mm[i], p*100)
 		dp = append(dp, opts.LineData{Value: p})
 	}
 
@@ -79,7 +80,16 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 func main() {
 	http.DefaultServeMux.HandleFunc("/chart", chart)
 	http.DefaultServeMux.HandleFunc("/", indexPage)
-	http.ListenAndServe(":8081", nil)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		http.ListenAndServe(":8081", nil)
+	}()
+
+	fmt.Println("server is running! listening on port 8081")
+
+	<-done
 }
 
 func calcProbabilityDistributionM(n, k, r int) ([]int, []float64, error) {

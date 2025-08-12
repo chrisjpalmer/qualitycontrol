@@ -26,11 +26,14 @@ This is [based on the following lecture](https://www.youtube.com/watch?v=e7RAK_i
 Prerequisites:
 - Go 1.22 or higher
 
+Run the server:
 ```sh
 git clone https://github.com/chrisjpalmer/qualitycontrol
 cd qualitycontrol
 go run .
 ```
+
+Browse to `http://localhost:8081/`
 
 ## How it works
 
