@@ -53,6 +53,7 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 			Title: "P(m defective in r samples)",
 		}),
 		charts.WithAnimation(false),
+		charts.WithYAxisOpts(opts.YAxis{Min: 0, Max: 1}),
 	)
 
 	mm, pp, err := calcProbabilityDistributionM(n, k, r)
