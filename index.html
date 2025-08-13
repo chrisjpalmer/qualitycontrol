@@ -3,6 +3,7 @@
         <script lang="js">
             window.onload = function() {
 
+                let refreshButton = document.getElementById("refresh")
                 let waiting = true;
                 let chart1 = document.getElementById("chart-1")
                 let chart2 = document.getElementById("chart-2")
@@ -14,7 +15,7 @@
 
                 function loadChart() {
                     waitingChart = nextChart;
-                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}`)
+                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}&s=${s}`)
                 }
 
                 function swapCharts() {
@@ -51,10 +52,12 @@
                 let n = "1000";
                 let k = "30";
                 let r = "10";
+                let s = "10";
 
                 document.getElementById("n").value = n;
                 document.getElementById("k").value = k;
                 document.getElementById("r").value = r;
+                document.getElementById("s").value = s;
 
 
                 document.getElementById("n").addEventListener('input', (ev) => {
@@ -72,6 +75,15 @@
                     loadChart()
                 })
 
+                document.getElementById("s").addEventListener('input', (ev) => {
+                    s = ev.target.value
+                    loadChart()
+                })
+
+                refreshButton.addEventListener('click', () => {
+                    loadChart()
+                })
+
                 loadChart();
             }
             
@@ -83,6 +95,23 @@
             <label>k<input id="k" name="k" type="number" min="1" max="1100"></label><br>
             <label>r<input id="r" name="r" type="number" min="1" max="1100"></label><br>
         </form>
+        <form>
+            Run s experiments with the above values of n, k and r.
+            The green line shows the statistics discovered for m.<br>
+            <label>s<input id="s" name="s" type="number" min="1" max="1100"></label>
+            <br>
+            <br>
+
+            Avg mse shows how well the stats measured after S experiments,
+            differ from the probabilistic distribution on average.
+
+            I.e. when s = 10, the avg mse shows that after sampling 10
+            factory lots, how well the mesaured stats match up to
+            the probabilistic distribution. This might show the effectiveness
+            of the sample size in reducing mse and thus how easy it is to
+            work backwards to find the value of k, if it was an unknown.
+        </form>
+        <button id="refresh">refresh</button>
         <iframe id="chart-1" style="height:1000px; width: 100%; visibility: visible; display: initial;"></iframe>
         <iframe id="chart-2" style="height:1000px; width: 100%; visibility: collapse; display: none;"></iframe>
     </body>

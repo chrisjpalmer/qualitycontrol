@@ -1,18 +1,32 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
 	_ "embed"
 
-	"github.com/chrisjpalmer/qualitycontrol/math"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
 )
+
+func main() {
+	http.DefaultServeMux.HandleFunc("/chart", chart)
+	http.DefaultServeMux.HandleFunc("/", indexPage)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		http.ListenAndServe(":8081", nil)
+	}()
+
+	fmt.Println("server is running! listening on port 8081")
+
+	<-done
+}
 
 //go:embed index.html
 var indexPageBytes []byte
@@ -43,10 +57,71 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	// create a new line instance
-	line := charts.NewLine()
+	s, err := strconv.Atoi(q.Get("s"))
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
 
-	// set some global options like Title/Legend/ToolTip or anything else
+	line := setupChart()
+
+	// calculate probabilities
+	mm, pp, min, max, err := pMMDefective(n, k, r)
+	if err != nil {
+		w.WriteHeader(400)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	mmdata := []opts.LineData{}
+	fmt.Printf("\n----------------------------------------------------\nn: %d, k: %d, r: %d\n", n, k, r)
+	for i, p := range pp {
+		fmt.Printf("m: %d => %.2f%%\n", mm[i], p*100)
+		mmdata = append(mmdata, opts.LineData{Value: p})
+	}
+
+	line.SetXAxis(mm).
+		AddSeries("P(m defective in r samples)", mmdata).
+		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(false)}))
+
+	// do experiment and graph the results
+	statMM := sampleLotSTimes(n, k, r, s)
+
+	if !mInBounds(statMM, min, max) {
+		w.WriteHeader(400)
+		w.Write([]byte("m not in bounds! What have you done Chris?"))
+		return
+	}
+
+	fmt.Printf("\n----------------------------------------------------\nstats\n\nn: %d, k: %d, r: %d\n", n, k, r)
+
+	statMMData := []opts.LineData{}
+
+	for _, m := range mm {
+		avg := statMM[m]
+		fmt.Printf("m: %d => %.2f%%\n", m, avg*100)
+		statMMData = append(statMMData, opts.LineData{Value: avg})
+	}
+
+	line.AddSeries("Avg(m defective in r samples)", statMMData).
+		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(false)}))
+
+	line.Render(w)
+
+	avgMse := avgMse(n, k, r, s, mm, pp)
+
+	fmt.Printf("avg mse: %.10f%%\n", avgMse)
+
+	writeAvgMSE(w, avgMse)
+}
+
+func writeAvgMSE(w io.Writer, avgMse float64) {
+	s := fmt.Sprintf(`<br><label>avg mse: %0.10f%%</label>`, avgMse)
+	w.Write([]byte(s))
+}
+
+func setupChart() *charts.Line {
+	line := charts.NewLine()
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeChalk}),
 		charts.WithTitleOpts(opts.Title{
@@ -56,90 +131,5 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 		charts.WithYAxisOpts(opts.YAxis{Min: 0, Max: 1}),
 	)
 
-	mm, pp, err := calcProbabilityDistributionM(n, k, r)
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	// make data points
-	dp := []opts.LineData{}
-	fmt.Printf("\n----------------------------------------------------\nn: %d, k: %d, r: %d\n", n, k, r)
-	for i, p := range pp {
-		fmt.Printf("m: %d => %.2f%%\n", mm[i], p*100)
-		dp = append(dp, opts.LineData{Value: p})
-	}
-
-	// Put data into instance
-	line.SetXAxis(mm).
-		AddSeries("P(m defective in samples size of R)", dp).
-		SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(false)}))
-	line.Render(w)
-}
-
-func main() {
-	http.DefaultServeMux.HandleFunc("/chart", chart)
-	http.DefaultServeMux.HandleFunc("/", indexPage)
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		http.ListenAndServe(":8081", nil)
-	}()
-
-	fmt.Println("server is running! listening on port 8081")
-
-	<-done
-}
-
-func calcProbabilityDistributionM(n, k, r int) ([]int, []float64, error) {
-	// calculate distribution
-	mm := []int{}
-	pp := []float64{}
-
-	max := k
-	if r < max {
-		max = r
-	}
-
-	for i := range max + 1 {
-		mm = append(mm, i)
-
-		p, err := calcProbabilityMInSampleSizeR(n, k, r, i)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if p > 1 {
-			return nil, nil, errors.New("floating point math error")
-		}
-
-		pp = append(pp, p)
-	}
-
-	return mm, pp, nil
-}
-
-func calcProbabilityMInSampleSizeR(n, k, r, m int) (float64, error) {
-	chooseGood, err := math.NChooseR{N: (n - k), R: (r - m)}.Expand()
-	if err != nil {
-		return 0, err
-	}
-
-	chooseBad, err := math.NChooseR{N: k, R: m}.Expand()
-	if err != nil {
-		return 0, err
-	}
-
-	totalSamples, err := math.NChooseR{N: n, R: r}.Expand()
-	if err != nil {
-		return 0, err
-	}
-
-	pq := chooseGood.Mult(chooseBad).Divide(totalSamples)
-
-	p := pq.Calculate()
-
-	return p, nil
+	return line
 }
