@@ -15,23 +15,21 @@
 
                 function loadChart() {
                     waitingChart = nextChart;
-                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}&s=${s}`)
+                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}&n2=${n2}&k2=${k2}&r2=${r2}&s=${s}&compare=${compare}`)
                 }
 
                 function swapCharts() {
-                    // setTimeout(() => {
-                        nextChart.style.visibility = "visible";
-                        nextChart.style.height = "1000px"
-                        nextChart.style.display = "initial";
-                        curChart.style.visibility = "collapse";
-                        curChart.style.height = "0px";
-                        curChart.style.display = "none";
-                        let _n = nextChart
-                        let _c = curChart
-                        curChart = _n
-                        nextChart = _c
-                        waitingChart = null
-                    // }, 200)
+                    nextChart.style.visibility = "visible";
+                    nextChart.style.height = "1000px"
+                    nextChart.style.display = "initial";
+                    curChart.style.visibility = "collapse";
+                    curChart.style.height = "0px";
+                    curChart.style.display = "none";
+                    let _n = nextChart
+                    let _c = curChart
+                    curChart = _n
+                    nextChart = _c
+                    waitingChart = null
                 }
 
                 chart1.addEventListener('load', () => {
@@ -52,12 +50,22 @@
                 let n = "1000";
                 let k = "30";
                 let r = "10";
+
+                let n2 = "1000";
+                let k2 = "30";
+                let r2 = "10";
                 let s = "10";
+                let compare = false;
 
                 document.getElementById("n").value = n;
                 document.getElementById("k").value = k;
                 document.getElementById("r").value = r;
+
+                document.getElementById("n2").value = n2;
+                document.getElementById("k2").value = k2;
+                document.getElementById("r2").value = r2;
                 document.getElementById("s").value = s;
+                document.getElementById("compare").checked = compare;
 
 
                 document.getElementById("n").addEventListener('input', (ev) => {
@@ -75,8 +83,28 @@
                     loadChart()
                 })
 
+                document.getElementById("n2").addEventListener('input', (ev) => {
+                    n2 = ev.target.value
+                    loadChart()
+                })
+
+                document.getElementById("k2").addEventListener('input', (ev) => {
+                    k2 = ev.target.value
+                    loadChart()
+                })
+
+                document.getElementById("r2").addEventListener('input', (ev) => {
+                    r2 = ev.target.value
+                    loadChart()
+                })
+
                 document.getElementById("s").addEventListener('input', (ev) => {
                     s = ev.target.value
+                    loadChart()
+                })
+
+                document.getElementById("compare").addEventListener('input', (ev) => {
+                    compare = ev.target.checked
                     loadChart()
                 })
 
@@ -91,25 +119,37 @@
     </head>
     <body>
         <form>
+            A factory produces `n` parts in a lot. 
+            `k` parts in the lot are defective. A sample `r` is taken
+            from the lot and `m` parts in the sample are found to be defective...
+
+            What is the probablity of finding `m` defective parts?
+            Or in other words, what is `P(m defective in r samples)`? <br><br>
+
             <label>n<input id="n" name="n" type="number" min="1" max="1100"></label><br>
             <label>k<input id="k" name="k" type="number" min="1" max="1100"></label><br>
             <label>r<input id="r" name="r" type="number" min="1" max="1100"></label><br>
         </form>
         <form>
-            Run s experiments with the above values of n, k and r.
+            <input id="compare" name="compare" type="checkbox"> run <input id="s" name="s" type="number" min="1" max="1100"> experiments with the following values of n, k and r.
             The green line shows the statistics discovered for m.<br>
-            <label>s<input id="s" name="s" type="number" min="1" max="1100"></label>
+
+            <label>n<input id="n2" name="n2" type="number" min="1" max="1100"></label><br>
+            <label>k<input id="k2" name="k2" type="number" min="1" max="1100"></label><br>
+            <label>r<input id="r2" name="r2" type="number" min="1" max="1100"></label><br>
             <br>
             <br>
 
-            Avg mse shows how well the stats measured after S experiments,
-            differ from the probabilistic distribution on average.
+            mse is the average error between the statistically gathered distribution
+            (as a result of running s number of experiments and calculating the distribution of M),
+            and the true distribution `P(m defective in r samples)`.
+            This allows us to see how well running s experiments approximates
+            the true distribution on average. A lower value of mse means the statistically gathered
+            distribution approxmiates the true distribution. This means we could treat
+            k like an unknown and guess-check "true distributions" based on different values of k
+            until we find the lowest mse which matches the statistically gathered distribution.
 
-            I.e. when s = 10, the avg mse shows that after sampling 10
-            factory lots, how well the mesaured stats match up to
-            the probabilistic distribution. This might show the effectiveness
-            of the sample size in reducing mse and thus how easy it is to
-            work backwards to find the value of k, if it was an unknown.
+           
         </form>
         <button id="refresh">refresh</button>
         <iframe id="chart-1" style="height:1000px; width: 100%; visibility: visible; display: initial;"></iframe>

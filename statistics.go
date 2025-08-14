@@ -59,17 +59,6 @@ func mInBounds(statMM map[int]float64, min int, max int) bool {
 	return true
 }
 
-func avgMse(n, k, r, s int, mm []int, pp []float64) float64 {
-	const largeNum = 1000
-
-	sum := 0.0
-	for range largeNum {
-		sum += mse(n, k, r, s, mm, pp)
-	}
-
-	return sum / largeNum
-}
-
 func mse(n, k, r, s int, mm []int, pp []float64) float64 {
 	statMM := sampleLotSTimes(n, k, r, s)
 
