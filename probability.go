@@ -6,32 +6,36 @@ import (
 	qmath "github.com/chrisjpalmer/qualitycontrol/math"
 )
 
-func pMMDefective(n, k, r int) (mm []int, pp []float64, min int, max int, err error) {
+func pMMDefective(n, k, r int) (mm []int, pp []float64, pdist map[int]float64, err error) {
 	// calculate distribution
 	mm = []int{}
 	pp = []float64{}
+	pdist = make(map[int]float64)
 
-	max = k
+	max := k
 	if r < max {
 		max = r
 	}
+
+	min := 0
 
 	for i := min; i < max+1; i++ {
 		mm = append(mm, i)
 
 		p, err := pMDefective(n, k, r, i)
 		if err != nil {
-			return nil, nil, 0, 0, err
+			return nil, nil, nil, err
 		}
 
 		if p > 1 {
-			return nil, nil, 0, 0, errors.New("floating point math error")
+			return nil, nil, nil, errors.New("floating point math error")
 		}
 
 		pp = append(pp, p)
+		pdist[i] = p
 	}
 
-	return mm, pp, min, max, nil
+	return mm, pp, pdist, nil
 }
 
 func pMDefective(n, k, r, m int) (float64, error) {

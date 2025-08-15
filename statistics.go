@@ -1,6 +1,8 @@
 package main
 
 import (
+	"iter"
+	"maps"
 	"math"
 	"math/rand"
 )
@@ -13,12 +15,12 @@ func sampleLotSTimes(n, k, r, s int) map[int]float64 {
 	}
 
 	// calculate averages of different m(s)
-	mavg := make(map[int]float64)
+	mdist := make(map[int]float64)
 	for m, c := range mcounts {
-		mavg[m] = float64(c) / float64(s)
+		mdist[m] = float64(c) / float64(s)
 	}
 
-	return mavg
+	return mdist
 }
 
 func sampleLot(n, k, r int) int {
@@ -49,24 +51,65 @@ func sampleLot(n, k, r int) int {
 	return m
 }
 
-func mInBounds(statMM map[int]float64, min int, max int) bool {
-	for m := range statMM {
-		if m < min || m > max {
-			return false
+func klDivergence(pdist, mdist map[int]float64) float64 {
+
+	mdistKeys := maps.Keys(mdist)
+	pdistKeys := maps.Keys(pdist)
+
+	min := minOfIters(mdistKeys, pdistKeys)
+	max := maxOfIters(mdistKeys, pdistKeys)
+
+	sum := 0.0
+	for i := min; i < max; i++ {
+		p := pdist[i]
+		q := mdist[i]
+
+		// Whenever P(x) is zero the contribution of the corresponding term
+		// is interpreted as zero because lim of xlog(x) as x approaches infinity is 0
+		if p == 0 {
+			continue
+		}
+
+		// to avoid getting infinity, make q a very small number if 0
+		if q == 0 {
+			q = 0.00000001
+		}
+
+		sum += p * math.Log(p/q)
+	}
+	return sum
+}
+
+func minOfIters(iter1, iter2 iter.Seq[int]) int {
+	min := 0
+	for x := range iter1 {
+		if x < min {
+			min = x
 		}
 	}
 
-	return true
+	for x := range iter2 {
+		if x < min {
+			min = x
+		}
+	}
+
+	return min
 }
 
-func mse(n, k, r, s int, mm []int, pp []float64) float64 {
-	statMM := sampleLotSTimes(n, k, r, s)
-
-	sum := 0.0
-	for _, m := range mm {
-		s := statMM[m]
-		p := pp[m]
-		sum += math.Pow(s-p, 2)
+func maxOfIters(iter1, iter2 iter.Seq[int]) int {
+	max := 0
+	for x := range iter1 {
+		if x > max {
+			max = x
+		}
 	}
-	return (sum / float64(len(mm))) * 100
+
+	for x := range iter2 {
+		if x > max {
+			max = x
+		}
+	}
+
+	return max
 }

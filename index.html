@@ -15,7 +15,7 @@
 
                 function loadChart() {
                     waitingChart = nextChart;
-                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}&n2=${n2}&k2=${k2}&r2=${r2}&s=${s}&compare=${compare}`)
+                    nextChart.setAttribute("src", `/chart?n=${n}&k=${k}&r=${r}&k2=${k2}&s=${s}&compare=${compare}`)
                 }
 
                 function swapCharts() {
@@ -51,19 +51,15 @@
                 let k = "30";
                 let r = "10";
 
-                let n2 = "1000";
                 let k2 = "30";
-                let r2 = "10";
-                let s = "10";
+                let s = "75";
                 let compare = false;
 
                 document.getElementById("n").value = n;
                 document.getElementById("k").value = k;
                 document.getElementById("r").value = r;
 
-                document.getElementById("n2").value = n2;
                 document.getElementById("k2").value = k2;
-                document.getElementById("r2").value = r2;
                 document.getElementById("s").value = s;
                 document.getElementById("compare").checked = compare;
 
@@ -83,21 +79,10 @@
                     loadChart()
                 })
 
-                document.getElementById("n2").addEventListener('input', (ev) => {
-                    n2 = ev.target.value
-                    loadChart()
-                })
-
                 document.getElementById("k2").addEventListener('input', (ev) => {
                     k2 = ev.target.value
                     loadChart()
                 })
-
-                document.getElementById("r2").addEventListener('input', (ev) => {
-                    r2 = ev.target.value
-                    loadChart()
-                })
-
                 document.getElementById("s").addEventListener('input', (ev) => {
                     s = ev.target.value
                     loadChart()
@@ -119,6 +104,7 @@
     </head>
     <body>
         <form>
+            <h2>P(m defective in r samples)</h2>
             A factory produces `n` parts in a lot. 
             `k` parts in the lot are defective. A sample `r` is taken
             from the lot and `m` parts in the sample are found to be defective...
@@ -129,26 +115,55 @@
             <label>n<input id="n" name="n" type="number" min="1" max="1100"></label><br>
             <label>k<input id="k" name="k" type="number" min="1" max="1100"></label><br>
             <label>r<input id="r" name="r" type="number" min="1" max="1100"></label><br>
+
+            The red line shows the true probability distribution, calculated using the formula:
+
+            <i>(n-k C r-m) * (k C m) / (n C r)</i>
+
+            <br><br>
         </form>
         <form>
-            <input id="compare" name="compare" type="checkbox"> run <input id="s" name="s" type="number" min="1" max="1100"> experiments with the following values of n, k and r.
-            The green line shows the statistics discovered for m.<br>
+            <h2>Avg(m defective in r samples over s experiments)</h2>
+            <input id="compare" name="compare" type="checkbox"> run <input id="s" name="s" type="number" min="1" max="1100"> experiments with the above values of n, r
+            and the following <input id="k2" name="k2" type="number" min="1" max="1100"> k.
+            
+            The green line shows a distribution gathered by performing the experiments.<br>
 
-            <label>n<input id="n2" name="n2" type="number" min="1" max="1100"></label><br>
-            <label>k<input id="k2" name="k2" type="number" min="1" max="1100"></label><br>
-            <label>r<input id="r2" name="r2" type="number" min="1" max="1100"></label><br>
             <br>
             <br>
 
-            mse is the average error between the statistically gathered distribution
+            kl divergence is the difference between the statistically gathered distribution
             (as a result of running s number of experiments and calculating the distribution of M),
             and the true distribution `P(m defective in r samples)`.
             This allows us to see how well running s experiments approximates
-            the true distribution on average. A lower value of mse means the statistically gathered
-            distribution approxmiates the true distribution. This means we could treat
-            k like an unknown and guess-check "true distributions" based on different values of k
-            until we find the lowest mse which matches the statistically gathered distribution.
+            the true distribution on average. 
+            
+            <br>
+            <br>
 
+            When the value of k is the same between the true distrubution and the statistically gathered one, 
+            a lower kl divergence means the statistically gathered distribution approxmiates the true distribution. 
+
+            <br>
+            <br>
+            
+            When the value k is not the same between the true distribution and the statistically gathered one,
+            a higher value of kl divergence indicates that the statistically gathered distrubution does not approximate the
+            true distribution.
+
+            <br>
+            <br>
+            
+            If both these properties are true, then the sample size r and the no. of experiments are working
+            together to help us approximate the true distribution from the statistcally gathered one.
+            This means we could reliably use this to guess the value of k of the true distribution (if it was an unknown).
+
+            <br>
+            <br>
+
+            Try setting k for the experiment to a different value to the true distribution value of k.
+            Watch how, by increasing r (the sample size), the kl divergence increases. Then gradually set k to the
+            correct value; notice how the kl divergence decreases.
            
         </form>
         <button id="refresh">refresh</button>

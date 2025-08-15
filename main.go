@@ -36,8 +36,8 @@ func indexPage(w http.ResponseWriter, rq *http.Request) {
 }
 
 type QueryParams struct {
-	n, k, r, n2, k2, r2, s int
-	compare                bool
+	n, k, r, k2, s int
+	compare        bool
 }
 
 func parseQuery(rq *http.Request) (QueryParams, error) {
@@ -61,17 +61,7 @@ func parseQuery(rq *http.Request) (QueryParams, error) {
 		return QueryParams{}, err
 	}
 
-	qp.n2, err = strconv.Atoi(q.Get("n2"))
-	if err != nil {
-		return QueryParams{}, err
-	}
-
 	qp.k2, err = strconv.Atoi(q.Get("k2"))
-	if err != nil {
-		return QueryParams{}, err
-	}
-
-	qp.r2, err = strconv.Atoi(q.Get("r2"))
 	if err != nil {
 		return QueryParams{}, err
 	}
@@ -100,7 +90,7 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 	}
 
 	// calculate probabilities
-	mm, pp, min, max, err := pMMDefective(qp.n, qp.k, qp.r)
+	mm, pp, pdist, err := pMMDefective(qp.n, qp.k, qp.r)
 	if err != nil {
 		w.WriteHeader(400)
 		w.Write([]byte(err.Error()))
@@ -120,15 +110,9 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 
 	if qp.compare {
 		// do experiment and graph the results
-		statMM := sampleLotSTimes(qp.n2, qp.k2, qp.r2, qp.s)
+		statMM := sampleLotSTimes(qp.n, qp.k2, qp.r, qp.s)
 
-		if !mInBounds(statMM, min, max) {
-			w.WriteHeader(400)
-			w.Write([]byte("m not in bounds! What have you done Chris?"))
-			return
-		}
-
-		fmt.Printf("\n----------------------------------------------------\nstats\n\nn: %d, k: %d, r: %d\n", qp.n2, qp.k2, qp.r2)
+		fmt.Printf("\n----------------------------------------------------\nstats\n\nn: %d, k: %d, r: %d\n", qp.n, qp.k2, qp.r)
 
 		statMMData := []opts.LineData{}
 
@@ -138,23 +122,25 @@ func chart(w http.ResponseWriter, rq *http.Request) {
 			statMMData = append(statMMData, opts.LineData{Value: avg})
 		}
 
-		line.AddSeries("Avg(m defective in r samples)", statMMData).
+		line.AddSeries(fmt.Sprintf("Avg(m defective in r samples over %d experiments)", qp.s), statMMData).
 			SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: opts.Bool(false)}))
 	}
 
 	line.Render(w)
 
 	if qp.compare {
-		mse := mse(qp.n2, qp.k2, qp.r2, qp.s, mm, pp)
+		mdist := sampleLotSTimes(qp.n, qp.k2, qp.r, qp.s)
 
-		fmt.Printf("mse: %.10f%%\n", mse)
+		kl := klDivergence(pdist, mdist)
 
-		writeMSE(w, mse)
+		fmt.Printf("kl: %.4f\n", kl)
+
+		writeKLDivergence(w, kl)
 	}
 }
 
-func writeMSE(w io.Writer, mse float64) {
-	s := fmt.Sprintf(`<br><label>mse: %0.10f%%</label>`, mse)
+func writeKLDivergence(w io.Writer, kl float64) {
+	s := fmt.Sprintf(`<br><label>kl divergence: %0.4f</label>`, kl)
 	w.Write([]byte(s))
 }
 
@@ -162,9 +148,6 @@ func setupChart() *charts.Line {
 	line := charts.NewLine()
 	line.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{Theme: types.ThemeChalk}),
-		charts.WithTitleOpts(opts.Title{
-			Title: "P(m defective in r samples)",
-		}),
 		charts.WithAnimation(false),
 		charts.WithYAxisOpts(opts.YAxis{Min: 0, Max: 1}),
 	)
